@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 from selenium import webdriver
-from PIL import ImageGrab
 from time import sleep
 import pandas as pd
 import smtplib
