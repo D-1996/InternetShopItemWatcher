@@ -23,7 +23,7 @@ options.add_argument("--window-size=%s" % WINDOW_SIZE)
 options.add_experimental_option('excludeSwitches',['enable-logging'])
 
 threshold = .99
-browser = webdriver.Chrome(options=options)
+driver = webdriver.Chrome(options=options)
 
 f=open("auth.txt","r")
 lines = f.readlines()
@@ -62,12 +62,12 @@ def gmailer(email_text,sender_email,rec_email,password):
     server.login(sender_email,password)
     server.sendmail(sender_email, rec_email, message.encode('utf-8'))
 
-def work_on_browser():
+def work_on_driver():
     message = ''
     for i,v in watchlist.iterrows():
-        browser.get(v[1])
-        product_name = browser.find_element_by_css_selector('#product > div.product-info-container._product-info-container > div > div.info-section > header > h1')
-        browser.save_screenshot('snapshot.png')
+        driver.get(v[1])
+        product_name = driver.find_element_by_css_selector('#product > div.product-info-container._product-info-container > div > div.info-section > header > h1')
+        driver.save_screenshot('snapshot.png')
         snapshot = cv2.imread('snapshot.png')
         screen = np.array(snapshot)
         scouted_size_available = check_for_sizes(v[0],screen)
@@ -78,7 +78,7 @@ def work_on_browser():
     return message
 
 def watch():
-    message = work_on_browser()
+    message = work_on_driver()
     print(message)
     print(len(message))
     if len(message)!=0:
@@ -91,7 +91,7 @@ def watch():
 for i in range(1):
     watch()
     #sleep(120)
-browser.close()
-browser.quit()
+driver.close()
+driver.quit()
     
 
