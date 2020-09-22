@@ -22,7 +22,6 @@ options.add_argument("headless")
 options.add_argument("--window-size=%s" % WINDOW_SIZE)
 options.add_experimental_option('excludeSwitches',['enable-logging'])
 
-
 threshold = .99
 browser = webdriver.Chrome(options=options)
 
@@ -33,22 +32,21 @@ rec_email = lines[1]
 password = lines[2]
 f.close()
 
-
 watchlist = pd.read_csv('watchlist.csv', sep = ';')
 
-def check_for_sizes(scouted_size,img_rgb):
+def check_for_sizes(scouted_size,screen):
     available = []
     for i, v in enumerate(sizes):
     
         name = sizes_str[i]
         template = v
         w, h = template.shape[:-1]
-        res = cv2.matchTemplate(img_rgb, template, cv2.TM_CCOEFF_NORMED)
+        res = cv2.matchTemplate(screen, template, cv2.TM_CCOEFF_NORMED)
         loc = np.where(res >= threshold)
 
         if loc[0].size != 0:
             available.append(name)
-            
+
     if scouted_size in available:
         return 'Dostępny szukany rozmiar : {}'.format(scouted_size)
      
@@ -70,9 +68,9 @@ def work_on_browser():
         browser.get(v[1])
         product_name = browser.find_element_by_css_selector('#product > div.product-info-container._product-info-container > div > div.info-section > header > h1')
         browser.save_screenshot('snapshot.png')
-        screen = cv2.imread('snapshot.png')
-        img_rgb = np.array(screen)
-        scouted_size_available = check_for_sizes(v[0],img_rgb)
+        snapshot = cv2.imread('snapshot.png')
+        screen = np.array(snapshot)
+        scouted_size_available = check_for_sizes(v[0],screen)
         if scouted_size_available == None:
             pass
         else:
