@@ -1,57 +1,67 @@
-import numpy as np
-import cv2
-from selenium import webdriver
-from time import sleep
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup as bs4
+from datetime import datetime
 import smtplib
 
-WINDOW_SIZE = "1920,1080"
 
-XS = cv2.imread('XS_black.png')
-S = cv2.imread('S_black.png')
-M = cv2.imread('M_black.png')
-L = cv2.imread('L_black.png')
-XL = cv2.imread('XL_black.png')
-XXL = cv2.imread('XXL_black.png')
 
-sizes = [XS,S,M,L,XL,XXL]
-sizes_str = ['XS','S','M','L','XL','XXL']
+headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'}
 
-options = webdriver.ChromeOptions()
-options.add_argument("headless")
-options.add_argument("--window-size=%s" % WINDOW_SIZE)
-options.add_experimental_option('excludeSwitches',['enable-logging'])
+def loadTargets(excel):
+    df = pd.read_csv(excel, sep = ';', encoding = "ISO-8859-1")
+    return df
 
-threshold = .99
-driver = webdriver.Chrome(options=options)
+def getPage(url):
+    ''' Transforms URL into html code'''
+    response = requests.get(url, headers = headers)
+    content = response.content
+    soup = bs4(content, 'html.parser')
+    return soup
 
-f=open("auth.txt","r")
-lines = f.readlines()
-sender_email = lines[0]
-rec_email = lines[1]
-password = lines[2]
-f.close()
+def getSizesData(soup):
+    d = {'Available':[], 'Unavailable': []}
+    for i in soup.findAll(class_ ='product-size'):
+        i = str(i)
+        size = i[i.find("data-name") + 11: i.find("data-sku") - 2].strip()
+        disabled = i.find('disabled')
 
-watchlist = pd.read_csv('watchlist.csv', sep = ';')
+        if disabled == -1:
+            d['Available'].append(size)
+        else:
+            d['Unavailable'].append(size)
+    return d
 
-def check_for_sizes(scouted_size,screen):
-    available = []
-    for i, v in enumerate(sizes):
+def searchForItems(dataframe):
+    MESSAGE = ''
+
+    for index, value in dataframe.iterrows():
+        scouted_url = value['URL']
+        scouted_size = value['SIZE']
+        scouted_name = value['NAME']
+
+        html = getPage(scouted_url)
+        results = getSizesData(html)
+
+        if scouted_size.upper() in results['Available']:
+            single_message = '{} HAS BEEN FOUND, SIZE - {}, LINK - {}.'.format(scouted_name, scouted_size, scouted_url)
+            print(single_message)
+            MESSAGE = MESSAGE + '\n' + single_message + '\n'
+        #print(results)
     
-        name = sizes_str[i]
-        template = v
-        w, h = template.shape[:-1]
-        res = cv2.matchTemplate(screen, template, cv2.TM_CCOEFF_NORMED)
-        loc = np.where(res >= threshold)
+    print(MESSAGE)
+    sendMessage(MESSAGE, sender_email, rec_email, password)
 
-        if loc[0].size != 0:
-            available.append(name)
 
-    if scouted_size in available:
-        return 'Dostępny szukany rozmiar : {}'.format(scouted_size)
-     
-
-def gmailer(email_text,sender_email,rec_email,password):
+def getCredentials(txtPath):
+    with open(txtPath) as file:
+        lines = file.readlines()
+        sender_email = lines[0]
+        password = lines[1]
+        rec_email = lines[2]
+        return sender_email, password, rec_email
+        
+def sendMessage(email_text, sender_email,rec_email,password):
 
     SUBJECT = 'Sizes available'
     message = 'Subject: {}\n\n{}'.format(SUBJECT, email_text)
@@ -62,36 +72,13 @@ def gmailer(email_text,sender_email,rec_email,password):
     server.login(sender_email,password)
     server.sendmail(sender_email, rec_email, message.encode('utf-8'))
 
-def work_on_driver():
-    message = ''
-    for i,v in watchlist.iterrows():
-        driver.get(v[1])
-        product_name = driver.find_element_by_css_selector('#product > div.product-info-container._product-info-container > div > div.info-section > header > h1')
-        driver.save_screenshot('snapshot.png')
-        snapshot = cv2.imread('snapshot.png')
-        screen = np.array(snapshot)
-        scouted_size_available = check_for_sizes(v[0],screen)
-        if scouted_size_available == None:
-            pass
-        else:
-            message = message + '{} / {} / {} \n'.format(product_name.text, v[1], scouted_size_available)    
-    return message
 
-def watch():
-    message = work_on_driver()
-    print(message)
-    print(len(message))
-    if len(message)!=0:
-        gmailer(message,sender_email,rec_email,password)
-    else:
-        pass
+df = loadTargets('targets.csv')
+sender_email, password, rec_email = getCredentials('WATCHER_AUTH.txt')
+
+while True:
+    print("Current Time =", datetime.now().strftime("%H:%M:%S"))
+    searchForItems(df)
 
 
-#test for 20 minutes
-for i in range(1):
-    watch()
-    #sleep(120)
-driver.close()
-driver.quit()
-    
 
