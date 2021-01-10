@@ -51,10 +51,7 @@ def searchForItems(dataframe):
             print(single_message)
             MESSAGE = MESSAGE + '\n' + single_message + '\n'
         #print(results)
-    
-    if len(MESSAGE) > 1:
-        sendMessage(MESSAGE, sender_email, rec_email, password)
-        print('Email sent')
+    return MESSAGE
 
 def getCredentials(txtPath):
     ''' Gets credentials for gmail '''
@@ -80,9 +77,21 @@ def sendMessage(email_text, sender_email,rec_email,password):
 df = loadTargets('targets.csv')
 sender_email, password, rec_email = getCredentials('WATCHER_AUTH.txt')
 
+previous_msg = ''
 while True:
+    #Added try
     print("Current Time =", datetime.now().strftime("%H:%M:%S"))
-    searchForItems(df)
+    try:
+        msg = searchForItems(df)
+
+        if len(msg) > 1 and msg != previous_msg:
+            sendMessage(msg, sender_email, rec_email, password)
+            print('Email sent')
+            previous_msg = msg
+        print('msg :',len(msg),'prev :', len(previous_msg))
+    except:
+        pass
+
 
 
 
