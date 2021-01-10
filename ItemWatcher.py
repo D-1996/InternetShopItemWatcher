@@ -4,11 +4,12 @@ from bs4 import BeautifulSoup as bs4
 from datetime import datetime
 import smtplib
 
-
+##TODO refactor to OOP
 
 headers = {'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36'}
 
 def loadTargets(excel):
+    ''' Reads csv '''
     df = pd.read_csv(excel, sep = ';', encoding = "ISO-8859-1")
     return df
 
@@ -20,6 +21,7 @@ def getPage(url):
     return soup
 
 def getSizesData(soup):
+    ''' Checks which sizes are available '''
     d = {'Available':[], 'Unavailable': []}
     for i in soup.findAll(class_ ='product-size'):
         i = str(i)
@@ -33,6 +35,7 @@ def getSizesData(soup):
     return d
 
 def searchForItems(dataframe):
+    ''' Checks if wanted size is available and sends an Email '''
     MESSAGE = ''
 
     for index, value in dataframe.iterrows():
@@ -49,11 +52,12 @@ def searchForItems(dataframe):
             MESSAGE = MESSAGE + '\n' + single_message + '\n'
         #print(results)
     
-    print(MESSAGE)
-    sendMessage(MESSAGE, sender_email, rec_email, password)
-
+    if len(MESSAGE) > 1:
+        sendMessage(MESSAGE, sender_email, rec_email, password)
+        print('Email sent')
 
 def getCredentials(txtPath):
+    ''' Gets credentials for gmail '''
     with open(txtPath) as file:
         lines = file.readlines()
         sender_email = lines[0]
